@@ -8,7 +8,9 @@ import android.graphics.drawable.LayerDrawable;
 import android.graphics.drawable.ShapeDrawable;
 import android.graphics.drawable.StateListDrawable;
 import android.graphics.drawable.shapes.OvalShape;
-import android.os.*;
+import android.os.Build;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.support.annotation.ColorRes;
 import android.support.annotation.DimenRes;
 import android.support.annotation.IntDef;
@@ -22,30 +24,22 @@ import android.view.animation.Interpolator;
 import android.widget.AbsListView;
 import android.widget.ImageButton;
 
+import com.nineoldandroids.view.ViewHelper;
+import com.nineoldandroids.view.ViewPropertyAnimator;
+
 /**
  * Android Google+ like floating action button which reacts on the attached list view scrolling events.
  *
  * @author Oleksandr Melnykov
  */
 public class FloatingActionButton extends ImageButton {
-    private static final int TRANSLATE_DURATION_MILLIS = 200;
-
-    @IntDef({TYPE_NORMAL, TYPE_MINI})
-    public @interface TYPE{}
     public static final int TYPE_NORMAL = 0;
     public static final int TYPE_MINI = 1;
-
+    private static final int TRANSLATE_DURATION_MILLIS = 200;
+    private final Interpolator mInterpolator = new AccelerateDecelerateInterpolator();
     protected AbsListView mListView;
 
     private int mScrollY;
-    private boolean mVisible;
-
-    private int mColorNormal;
-    private int mColorPressed;
-    private boolean mShadow;
-    private int mType;
-
-    private final Interpolator mInterpolator = new AccelerateDecelerateInterpolator();
     private final AbsListView.OnScrollListener mOnScrollListener = new AbsListView.OnScrollListener() {
         @Override
         public void onScrollStateChanged(AbsListView view, int scrollState) {
@@ -68,6 +62,11 @@ public class FloatingActionButton extends ImageButton {
             mScrollY = newScrollY;
         }
     };
+    private boolean mVisible;
+    private int mColorNormal;
+    private int mColorPressed;
+    private boolean mShadow;
+    private int mType;
 
     public FloatingActionButton(Context context) {
         this(context, null);
@@ -205,13 +204,6 @@ public class FloatingActionButton extends ImageButton {
         return marginBottom;
     }
 
-    public void setColorNormal(int color) {
-        if (color != mColorNormal) {
-            mColorNormal = color;
-            updateBackground();
-        }
-    }
-
     public void setColorNormalResId(@ColorRes int colorResId) {
         setColorNormal(getColor(colorResId));
     }
@@ -220,9 +212,9 @@ public class FloatingActionButton extends ImageButton {
         return mColorNormal;
     }
 
-    public void setColorPressed(int color) {
-        if (color != mColorPressed) {
-            mColorPressed = color;
+    public void setColorNormal(int color) {
+        if (color != mColorNormal) {
+            mColorNormal = color;
             updateBackground();
         }
     }
@@ -233,6 +225,13 @@ public class FloatingActionButton extends ImageButton {
 
     public int getColorPressed() {
         return mColorPressed;
+    }
+
+    public void setColorPressed(int color) {
+        if (color != mColorPressed) {
+            mColorPressed = color;
+            updateBackground();
+        }
     }
 
     public void setShadow(boolean shadow) {
@@ -246,16 +245,16 @@ public class FloatingActionButton extends ImageButton {
         return mShadow;
     }
 
+    @TYPE
+    public int getType() {
+        return mType;
+    }
+
     public void setType(@TYPE int type) {
         if (type != mType) {
             mType = type;
             updateBackground();
         }
-    }
-
-    @TYPE
-    public int getType() {
-        return mType;
     }
 
     protected AbsListView.OnScrollListener getOnScrollListener() {
@@ -301,11 +300,11 @@ public class FloatingActionButton extends ImageButton {
             }
             int translationY = visible ? 0 : height + getMarginBottom();
             if (animate) {
-                animate().setInterpolator(mInterpolator)
-                    .setDuration(TRANSLATE_DURATION_MILLIS)
-                    .translationY(translationY);
+                ViewPropertyAnimator.animate(this).setInterpolator(mInterpolator)
+                        .setDuration(TRANSLATE_DURATION_MILLIS)
+                        .translationY(translationY);
             } else {
-                setTranslationY(translationY);
+                ViewHelper.setTranslationY(this, translationY);
             }
         }
     }
@@ -318,12 +317,28 @@ public class FloatingActionButton extends ImageButton {
         mListView.setOnScrollListener(mOnScrollListener);
     }
 
+    @IntDef({TYPE_NORMAL, TYPE_MINI})
+    public @interface TYPE {
+    }
+
     /**
      * A {@link android.os.Parcelable} representing the {@link com.melnykov.fab.FloatingActionButton}'s
      * state.
      */
     public static class SavedState extends BaseSavedState {
 
+        public static final Creator<SavedState> CREATOR = new Creator<SavedState>() {
+
+            @Override
+            public SavedState createFromParcel(Parcel in) {
+                return new SavedState(in);
+            }
+
+            @Override
+            public SavedState[] newArray(int size) {
+                return new SavedState[size];
+            }
+        };
         private int mScrollY;
 
         public SavedState(Parcelable parcel) {
@@ -340,18 +355,5 @@ public class FloatingActionButton extends ImageButton {
             super.writeToParcel(out, flags);
             out.writeInt(mScrollY);
         }
-
-        public static final Creator<SavedState> CREATOR = new Creator<SavedState>() {
-
-            @Override
-            public SavedState createFromParcel(Parcel in) {
-                return new SavedState(in);
-            }
-
-            @Override
-            public SavedState[] newArray(int size) {
-                return new SavedState[size];
-            }
-        };
     }
 }
