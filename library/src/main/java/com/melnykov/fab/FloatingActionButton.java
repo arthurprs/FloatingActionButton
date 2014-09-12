@@ -35,7 +35,8 @@ import com.nineoldandroids.view.ViewPropertyAnimator;
 public class FloatingActionButton extends ImageButton {
     public static final int TYPE_NORMAL = 0;
     public static final int TYPE_MINI = 1;
-    private static final int TRANSLATE_DURATION_MILLIS = 200;
+    public static final int TYPE_CUSTOM = 2;
+    private static final int DEFAULT_TRANSLATE_DURATION = 200;
     private final Interpolator mInterpolator = new AccelerateDecelerateInterpolator();
     protected AbsListView mListView;
 
@@ -67,6 +68,7 @@ public class FloatingActionButton extends ImageButton {
     private int mColorPressed;
     private boolean mShadow;
     private int mType;
+    private int mTranslationDuration;
 
     public FloatingActionButton(Context context) {
         this(context, null);
@@ -85,6 +87,8 @@ public class FloatingActionButton extends ImageButton {
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+        if (mType == TYPE_CUSTOM)
+            return;
         int size = getDimension(
                 mType == TYPE_NORMAL ? R.dimen.fab_size_normal : R.dimen.fab_size_mini);
         if (mShadow) {
@@ -123,7 +127,8 @@ public class FloatingActionButton extends ImageButton {
         if (attributeSet != null) {
             initAttributes(context, attributeSet);
         }
-        updateBackground();
+        if (mType != TYPE_CUSTOM)
+            updateBackground();
     }
 
     private void initAttributes(Context context, AttributeSet attributeSet) {
@@ -136,6 +141,9 @@ public class FloatingActionButton extends ImageButton {
                         getColor(android.R.color.holo_blue_light));
                 mShadow = attr.getBoolean(R.styleable.FloatingActionButton_fab_shadow, true);
                 mType = attr.getInt(R.styleable.FloatingActionButton_fab_type, TYPE_NORMAL);
+                mTranslationDuration = attr.getInt(
+                        R.styleable.FloatingActionButton_fab_translationDuration,
+                        DEFAULT_TRANSLATE_DURATION);
             } finally {
                 attr.recycle();
             }
@@ -143,6 +151,8 @@ public class FloatingActionButton extends ImageButton {
     }
 
     private void updateBackground() {
+        if (mType == TYPE_CUSTOM)
+            throw new RuntimeException("Can't update style when type is CUSTOM");
         StateListDrawable drawable = new StateListDrawable();
         drawable.addState(new int[]{android.R.attr.state_pressed}, createDrawable(mColorPressed));
         drawable.addState(new int[]{}, createDrawable(mColorNormal));
@@ -253,7 +263,8 @@ public class FloatingActionButton extends ImageButton {
     public void setType(@TYPE int type) {
         if (type != mType) {
             mType = type;
-            updateBackground();
+            if (type != TYPE_CUSTOM)
+                updateBackground();
         }
     }
 
@@ -301,7 +312,7 @@ public class FloatingActionButton extends ImageButton {
             int translationY = visible ? 0 : height + getMarginBottom();
             if (animate) {
                 ViewPropertyAnimator.animate(this).setInterpolator(mInterpolator)
-                        .setDuration(TRANSLATE_DURATION_MILLIS)
+                        .setDuration(mTranslationDuration)
                         .translationY(translationY);
             } else {
                 ViewHelper.setTranslationY(this, translationY);
@@ -317,7 +328,7 @@ public class FloatingActionButton extends ImageButton {
         mListView.setOnScrollListener(mOnScrollListener);
     }
 
-    @IntDef({TYPE_NORMAL, TYPE_MINI})
+    @IntDef({TYPE_NORMAL, TYPE_MINI, TYPE_CUSTOM})
     public @interface TYPE {
     }
 
