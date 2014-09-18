@@ -24,6 +24,8 @@ import android.view.animation.Interpolator;
 import android.widget.AbsListView;
 import android.widget.ImageButton;
 
+import com.nineoldandroids.animation.Animator;
+import com.nineoldandroids.animation.AnimatorListenerAdapter;
 import com.nineoldandroids.view.ViewHelper;
 import com.nineoldandroids.view.ViewPropertyAnimator;
 
@@ -69,6 +71,9 @@ public class FloatingActionButton extends ImageButton {
     private boolean mShadow;
     private int mType;
     private int mTranslationDuration;
+    private float mBounceHeight;
+    private int mBounceDuration;
+    private Interpolator mBounceInterpolator;
 
     public FloatingActionButton(Context context) {
         this(context, null);
@@ -313,11 +318,39 @@ public class FloatingActionButton extends ImageButton {
             if (animate) {
                 ViewPropertyAnimator.animate(this).setInterpolator(mInterpolator)
                         .setDuration(mTranslationDuration)
-                        .translationY(translationY);
+                        .translationY(translationY)
+                        .setListener(new AnimatorListenerAdapter() {
+                            @Override
+                            public void onAnimationEnd(Animator ignore) {
+                                resetBounce();
+                            }
+                        });
             } else {
                 ViewHelper.setTranslationY(this, translationY);
+                resetBounce();
             }
         }
+    }
+
+    private void resetBounce() {
+        if (mBounceHeight == 0 || mBounceDuration == 0 || !mVisible)
+            return;
+        if (mBounceInterpolator == null)
+            mBounceInterpolator = new AccelerateDecelerateInterpolator();
+        final ViewPropertyAnimator animation = ViewPropertyAnimator.animate(this);
+        animation.setInterpolator(mBounceInterpolator)
+                .setDuration(mBounceDuration)
+                .setStartDelay(mBounceDuration)
+                .translationY(mBounceHeight)
+                .setListener(new AnimatorListenerAdapter() {
+                    boolean up;
+
+                    @Override
+                    public void onAnimationEnd(Animator ignore) {
+                        up = !up;
+                        animation.setStartDelay(0).translationY(up ? 0 : mBounceHeight);
+                    }
+                });
     }
 
     public void attachToListView(@NonNull AbsListView listView) {
@@ -326,6 +359,24 @@ public class FloatingActionButton extends ImageButton {
         }
         mListView = listView;
         mListView.setOnScrollListener(mOnScrollListener);
+    }
+
+    public float getBounceHeight() {
+        return mBounceHeight;
+    }
+
+    public void setBounceHeight(float mBounceHeight) {
+        this.mBounceHeight = mBounceHeight;
+        resetBounce();
+    }
+
+    public int getBounceDuration() {
+        return mBounceDuration;
+    }
+
+    public void setBounceDuration(int mBounceDuration) {
+        this.mBounceDuration = mBounceDuration;
+        resetBounce();
     }
 
     @IntDef({TYPE_NORMAL, TYPE_MINI, TYPE_CUSTOM})
